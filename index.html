@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decs&Lagulion - Интернет-магазин</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .cta-button {
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .modal-backdrop {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 2rem; border-radius: 0.5rem; max-width: 90%;
+            width: 600px; max-height: 90vh; overflow-y: auto; position: relative;
+        }
+        .modal-close {
+            position: absolute; top: 1rem; right: 1rem; cursor: pointer;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .comparison-slider {
+            position: relative; width: 100%; aspect-ratio: 4 / 3.5; overflow: hidden;
+            border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            cursor: ew-resize;
+        }
+        .comparison-slider .before-image, .comparison-slider .after-image {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+        .comparison-slider img {
+            width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+        }
+        .after-image { clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
+        .slider-handle {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 4px; height: 100%; background-color: white; z-index: 10; pointer-events: none;
+        }
+        .slider-handle .slider-arrow {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 40px; height: 40px; background-color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        .slider-handle .slider-arrow::before, .slider-handle .slider-arrow::after {
+            content: ''; width: 0; height: 0; border-style: solid;
+        }
+        .slider-handle .slider-arrow::before { border-color: transparent #667eea transparent transparent; border-width: 5px 8px 5px 0; }
+        .slider-handle .slider-arrow::after { border-color: transparent transparent transparent #667eea; border-width: 5px 0 5px 8px; }
+        .no-select { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+        
+        .carousel-wrapper, .about-slider {
+            position: relative;
+        }
+        .carousel-container, .about-slides-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .carousel-container::-webkit-scrollbar, .about-slides-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .carousel-slide {
+            flex: 0 0 50%;
+            padding: 0.5rem;
+        }
+        @media (min-width: 768px) { .carousel-slide { flex: 0 0 33.333%; } }
+        @media (min-width: 1024px) { .carousel-slide { flex: 0 0 25%; } }
+
+        .about-slide {
+            flex: 0 0 100%;
+        }
+        
+        .carousel-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: white;
+            border-radius: 50%;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 10;
+        }
+        .carousel-arrow.left { left: 1rem; }
+        .carousel-arrow.right { right: 1rem; }
+        .carousel-arrow.rec-left { left: -1rem; }
+        .carousel-arrow.rec-right { right: -1rem; }
+
+        /* Chat animation styles */
+        #assistant-container {
+            overflow: hidden;
+        }
+        #assistant-intro {
+            flex-basis: 33.333333%;
+            flex-shrink: 0;
+            overflow: hidden;
+            transition: flex-basis 0.7s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out, margin-right 0.7s cubic-bezier(0.4, 0, 0.2, 1), padding 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #assistant-chat-view {
+             flex-basis: 66.666667%;
+             transition: flex-basis 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .chat-active #assistant-intro {
+            opacity: 0;
+            flex-basis: 0;
+            width: 0;
+            padding: 0;
+            margin-right: 0 !important;
+        }
+        .chat-active #assistant-chat-view {
+            flex-basis: 100%;
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            padding: 0.75rem 1rem;
+            border-radius: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .user-bubble {
+            background-color: #e0e7ff;
+            color: #1f2937;
+            align-self: flex-end;
+            border-bottom-right-radius: 0.25rem;
+        }
+        .assistant-bubble {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            align-self: flex-start;
+            border-bottom-left-radius: 0.25rem;
+            white-space: pre-wrap; /* Preserve newlines */
+        }
+        .assistant-bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #9ca3af;
+            margin: 0 2px;
+            animation: typing 1.4s infinite both;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0% { opacity: 0.2; }
+            20% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <a href="#home" class="nav-link text-2xl font-bold text-gray-800 lg:text-3xl">Decs&Lagulion</a>
+                </div>
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="#home" class="nav-link text-gray-600 hover:text-blue-500 transition-colors">Главная</a>
+                    
+                    <div class="relative group py-4 -my-4">
+                        <a href="#catalog" class="nav-link text-gray-600 hover:text-blue-500 transition-colors flex items-center cursor-pointer">
+                            Каталог
+                            <svg class="w-4 h-4 ml-1 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                        </a>
+                        <div class="absolute z-10 hidden group-hover:block bg-white shadow-lg rounded-md mt-2 py-1 w-48 transition-all duration-300">
+                            <a href="#catalog-decs" class="nav-link block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Продукция Decs</a>
+                            <a href="#catalog-lagulion" class="nav-link block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Продукция Lagulion</a>
+                        </div>
+                    </div>
+
+                    <a href="#about" class="nav-link text-gray-600 hover:text-blue-500 transition-colors">О нас</a>
+                    <a href="#contact" class="nav-link text-gray-600 hover:text-blue-500 transition-colors">Контакты</a>
+                </nav>
+                <div class="flex items-center">
+                    <a href="#cart" class="nav-link relative text-gray-600 hover:text-blue-500">
+                        <svg class="h-6 w-6" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        <span id="cart-badge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style="display: none;">0</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- СТРАНИЦА: Главная -->
+        <div id="page-home" class="page active">
+            <div class="gradient-bg text-white"><div class="container mx-auto px-6 py-20 text-center"><h1 class="text-4xl md:text-6xl font-bold mb-4">Чистота и свежесть в каждом флаконе</h1><p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto">Откройте для себя нашу эксклюзивную линию бытовой химии, созданную для безупречного дома.</p><a href="#catalog" class="nav-link bg-white text-gray-800 font-bold rounded-full py-4 px-8 uppercase cta-button">Перейти к каталогу</a></div></div>
+            <section class="py-20 bg-white"><div class="container mx-auto px-6"><div class="text-center mb-12"><h2 class="text-3xl font-bold text-gray-800">Ваш надежный партнер в мире чистоты</h2><p class="text-gray-600 mt-4 max-w-2xl mx-auto">Мы предлагаем проверенные решения, которые делают вашу жизнь проще, а дом — чище.</p></div><div class="grid md:grid-cols-3 gap-12 text-center"><div><div class="flex items-center justify-center h-16 w-16 mx-auto bg-blue-100 text-blue-500 rounded-full"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><h3 class="text-xl font-bold mt-6">Гарантия качества</h3><p class="mt-2 text-gray-600">Мы используем только сертифицированные компоненты и многоступенчатый контроль производства.</p></div><div><div class="flex items-center justify-center h-16 w-16 mx-auto bg-purple-100 text-purple-500 rounded-full"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></div><h3 class="text-xl font-bold mt-6">Инновационные подходы</h3><p class="mt-2 text-gray-600">Наши лаборатории создают уникальные и эффективные формулы для решения сложных проблем.</p></div><div><div class="flex items-center justify-center h-16 w-16 mx-auto bg-green-100 text-green-500 rounded-full"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><h3 class="text-xl font-bold mt-6">Забота о вас</h3><p class="mt-2 text-gray-600">Мы создаем продукты, которые эффективны и безопасны для вашей семьи. Ваше доверие — наша главная ценность.</p></div></div></div></section>
+            <section class="py-20 bg-gray-50"><div class="container mx-auto px-6"><div class="text-center mb-12"><h2 class="text-3xl font-bold text-gray-800">Наглядно о результате</h2><p class="text-gray-600 mt-4 max-w-2xl mx-auto">Убедитесь сами в эффективности нашей продукции. Просто двигайте ползунок, чтобы увидеть разницу.</p></div><div class="grid md:grid-cols-3 gap-8"><div class="comparison-slider"><div class="before-image"><img src="https://images.unsplash.com/photo-1588111425402-36a83a439f04?q=80&w=1974&auto=format&fit=crop" alt="Грязная плита до чистки" onerror="this.onerror=null;this.src='https://placehold.co/600x400/964B00/ffffff?text=Грязная+плита';"><div class="absolute top-2 left-2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">ДО</div></div><div class="after-image"><img src="https://images.unsplash.com/photo-1604323209383-3ba285704944?q=80&w=1974&auto=format&fit=crop" alt="Чистая плита после чистки" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f0f0f0/333333?text=Чистая+плита';"><div class="absolute top-2 right-2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">ПОСЛЕ</div></div><div class="slider-handle"><div class="slider-arrow"></div></div></div><div class="comparison-slider"><div class="before-image"><img src="https://images.unsplash.com/photo-1628759325988-a6d9b9b8b2e5?q=80&w=2070&auto=format&fit=crop" alt="Грязная раковина до чистки" onerror="this.onerror=null;this.src='https://placehold.co/600x400/c0c0c0/ffffff?text=Грязная+раковина';"><div class="absolute top-2 left-2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">ДО</div></div><div class="after-image"><img src="https://images.unsplash.com/photo-1601138099684-24a9a5933226?q=80&w=1935&auto=format&fit=crop" alt="Чистая раковина после чистки" onerror="this.onerror=null;this.src='https://placehold.co/600x400/ffffff/333333?text=Чистая+раковина';"><div class="absolute top-2 right-2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">ПОСЛЕ</div></div><div class="slider-handle"><div class="slider-arrow"></div></div></div><div class="comparison-slider"><div class="before-image"><img src="https://images.unsplash.com/photo-1599540062231-15b53d077437?q=80&w=1974&auto=format&fit=crop" alt="Грязное окно до чистки" onerror="this.onerror=null;this.src='https://placehold.co/600x400/a9a9a9/ffffff?text=Грязное+окно';"><div class="absolute top-2 left-2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">ДО</div></div><div class="after-image"><img src="https://images.unsplash.com/photo-1563286389-94073006a86f?q=80&w=1976&auto=format&fit=crop" alt="Чистое окно после чистки" onerror="this.onerror=null;this.src='https://placehold.co/600x400/87ceeb/333333?text=Чистое+окно';"><div class="absolute top-2 right-2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">ПОСЛЕ</div></div><div class="slider-handle"><div class="slider-arrow"></div></div></div></div></div></section>
+            
+            <section class="py-20 bg-gray-100">
+                <div class="container mx-auto px-6">
+                    <div id="assistant-container" class="bg-white p-8 rounded-lg shadow-2xl max-w-5xl mx-auto flex flex-col md:flex-row gap-8">
+                        <div id="assistant-intro" class="flex-shrink-0 md:w-1/3 text-center md:text-left">
+                           <img src="https://64.media.tumblr.com/a233ef3d54e44b6df0533b045438043c/d798977bb48b0541-07/s540x810/a6228bd7ed7663755fe5aef175b90be18a071bbb.gif" alt="Анимация робота-помощника" class="w-32 h-32 mx-auto md:mx-0 mb-4 rounded-full object-cover">
+                            <h2 class="text-2xl font-bold text-gray-800">Умный помощник</h2>
+                            <p class="text-gray-600 mt-2 mb-4">Ваш личный эксперт по чистоте. Просто опишите задачу!</p>
+                            <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                                <span class="text-xs font-semibold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">Помощь с пятнами</span>
+                                <span class="text-xs font-semibold bg-purple-100 text-purple-800 px-3 py-1 rounded-full">Планы уборки</span>
+                                <span class="text-xs font-semibold bg-green-100 text-green-800 px-3 py-1 rounded-full">Помогу с выбором товара</span>
+                            </div>
+                        </div>
+                        <div id="assistant-chat-view" class="flex-grow flex flex-col min-w-0">
+                             <div id="chat-history" class="flex-grow space-y-4 overflow-y-auto pr-4 flex flex-col" style="height: 200px;">
+                                <div class="assistant-bubble">
+                                    <p>Здравствуйте! Чем могу помочь?</p>
+                                </div>
+                            </div>
+                             <form id="chat-form" class="mt-4 flex gap-2">
+                                <input id="chat-input" type="text" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Напишите свой вопрос здесь...">
+                                <button type="submit" class="gradient-bg text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 cta-button">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- СТРАНИЦА: Общий Каталог -->
+        <div id="page-catalog" class="page">
+            <section class="py-20"><div class="container mx-auto px-6"><h2 class="text-4xl font-bold text-center text-gray-800 mb-12">Наш Каталог</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" id="catalog-all-container"></div></div></section>
+        </div>
+
+        <!-- СТРАНИЦА: Каталог DECS -->
+        <div id="page-catalog-decs" class="page">
+            <section class="py-20"><div class="container mx-auto px-6"><h2 class="text-4xl font-bold text-center text-gray-800 mb-12">Каталог: Продукция Decs</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" id="catalog-decs-container"></div></div></section>
+        </div>
+        
+        <!-- СТРАНИЦА: Каталог LAGULION -->
+        <div id="page-catalog-lagulion" class="page">
+            <section class="py-20"><div class="container mx-auto px-6"><h2 class="text-4xl font-bold text-center text-gray-800 mb-12">Каталог: Продукция Lagulion</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" id="catalog-lagulion-container"></div></div></section>
+        </div>
+
+        <!-- СТРАНИЦА: О нас -->
+        <div id="page-about" class="page">
+             <section class="bg-white py-20">
+                <div class="container mx-auto px-6">
+                    <div class="text-center mb-16">
+                        <h2 class="text-4xl font-bold text-gray-800 mb-4">О Нашей Компании</h2>
+                        <p class="text-lg text-gray-600 max-w-3xl mx-auto">Мы специализируемся на производстве продукции, соответствующей высоким стандартам качества ГОСТ. Наша цель — предложить вам идеальное сочетание цены и качества для ухода за домом и семьей.</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-12 text-center">
+                        <div class="flex flex-col items-center">
+                           <div class="flex items-center justify-center h-20 w-20 mx-auto bg-blue-100 text-blue-500 rounded-full mb-4">
+                               <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                           </div>
+                           <h3 class="text-xl font-bold mb-2">Высокие стандарты</h3>
+                           <p class="text-gray-600">Осуществляем полный цикл производства от идеи до готового продукта в тесном сотрудничестве с лабораториями и сертифицирующими органами.</p>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="flex items-center justify-center h-20 w-20 mx-auto bg-purple-100 text-purple-500 rounded-full mb-4">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 16v-2m8-8h2m-18 0H2m14.657-6.343l1.414-1.414M5.343 18.657l-1.414 1.414m14.142 0l-1.414-1.414M3.929 5.343l1.414 1.414"></path><circle cx="12" cy="12" r="4"></circle></svg>
+                            </div>
+                           <h3 class="text-xl font-bold mb-2">Современное оборудование</h3>
+                           <p class="text-gray-600">Используем только самое высокотехнологичное оборудование для достижения высокой производительности, точности и надежности.</p>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="flex items-center justify-center h-20 w-20 mx-auto bg-green-100 text-green-500 rounded-full mb-4">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                           </div>
+                           <h3 class="text-xl font-bold mb-2">Команда экспертов</h3>
+                           <p class="text-gray-600">Наша команда — это высококвалифицированные специалисты. Мы постоянно инвестируем в их профессиональное развитие.</p>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="flex items-center justify-center h-20 w-20 mx-auto bg-yellow-100 text-yellow-500 rounded-full mb-4">
+                               <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.37 3.434-1.415 3.434H4.828c-1.785 0-2.674-2.174-1.414-3.434l5-5A2 2 0 008 10.172V5L7 4h1z"></path></svg>
+                            </div>
+                           <h3 class="text-xl font-bold mb-2">Лучшие на рынке</h3>
+                           <p class="text-gray-600">Мы гордимся тем, что получили сертификат лауреата номинации «Лучшее предприятие отрасли 2022».</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="my-16 sm:my-20">
+                    <div class="container mx-auto px-6">
+                        <div class="about-slider w-full lg:w-3/4 mx-auto overflow-hidden rounded-lg shadow-2xl">
+                            <div class="about-slides-container">
+                                <div class="about-slide"><img src="https://placehold.co/1200x600/667eea/ffffff?text=Фото+нашего+производства" alt="Фото производства" class="w-full"></div>
+                                <div class="about-slide"><img src="https://placehold.co/1200x600/764ba2/ffffff?text=Наша+команда" alt="Фото команды" class="w-full"></div>
+                                <div class="about-slide"><img src="https://placehold.co/1200x600/a78bfa/ffffff?text=Наша+продукция" alt="Фото продукции" class="w-full"></div>
+                            </div>
+                            <button id="about-arrow-left" class="carousel-arrow left"><svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                            <button id="about-arrow-right" class="carousel-arrow right"><svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 py-20">
+                    <div class="container mx-auto px-6 text-center">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-4">Наши Достижения</h2>
+                        <p class="text-gray-600 mb-12 max-w-2xl mx-auto">Мы гордимся качеством нашей продукции, которое подтверждено многочисленными наградами и сертификатами.</p>
+                        <div class="flex flex-wrap justify-center items-center gap-8 md:gap-12">
+                            <div class="text-center">
+                                <img src="https://placehold.co/150x210/e2e8f0/333?text=Грамота+2024" alt="Награда Эко-продукт 2024" class="h-48 object-cover shadow-lg rounded-lg transform hover:scale-110 transition-transform duration-300">
+                                <p class="mt-4 font-semibold text-gray-700">Эко-продукт 2024</p>
+                            </div>
+                            <div class="text-center">
+                                <img src="https://placehold.co/150x210/e2e8f0/333?text=Сертификат+ISO" alt="Сертификат качества ISO 9001" class="h-48 object-cover shadow-lg rounded-lg transform hover:scale-110 transition-transform duration-300">
+                                <p class="mt-4 font-semibold text-gray-700">Сертификат ISO 9001</p>
+                            </div>
+                            <div class="text-center">
+                                <img src="https://placehold.co/150x210/e2e8f0/333?text=Знак+отличия" alt="Лучший бытовой бренд 2023" class="h-48 object-cover shadow-lg rounded-lg transform hover:scale-110 transition-transform duration-300">
+                                 <p class="mt-4 font-semibold text-gray-700">Лучший Бренд 2023</p>
+                            </div>
+                            <div class="text-center">
+                                <img src="https://placehold.co/150x210/e2e8f0/333?text=Диплом" alt="Диплом выставки 'ХимЭкспо'" class="h-48 object-cover shadow-lg rounded-lg transform hover:scale-110 transition-transform duration-300">
+                                 <p class="mt-4 font-semibold text-gray-700">Диплом "ХимЭкспо"</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- СТРАНИЦА: Контакты -->
+        <div id="page-contact" class="page">
+            <section class="py-20"><div class="container mx-auto px-6"><h2 class="text-4xl font-bold text-center text-gray-800 mb-12">Свяжитесь с нами</h2><div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg"><div class="grid grid-cols-1 md:grid-cols-2 gap-12"><div><h3 class="text-2xl font-bold text-gray-800 mb-4">Наш офис</h3><p class="text-gray-600">ул. Примерная, д. 123, офис 456<br>Москва, Россия, 123456</p><h3 class="text-2xl font-bold text-gray-800 mt-6 mb-4">Электронная почта</h3><p class="text-gray-600">Для общих вопросов: <a href="mailto:contact@decs-lagulion.com" class="text-blue-500">contact@decs-lagulion.com</a></p><p class="text-gray-600">Отдел продаж: <a href="mailto:sales@decs-lagulion.com" class="text-blue-500">sales@decs-lagulion.com</a></p><h3 class="text-2xl font-bold text-gray-800 mt-6 mb-4">Телефон</h3><p class="text-gray-600">+7 (800) 555-35-35</p></div><div><h3 class="text-2xl font-bold text-gray-800 mb-4">Отправьте нам сообщение</h3><form><div class="mb-4"><label for="name" class="block text-gray-700 font-bold mb-2">Ваше имя</label><input type="text" id="name" class="w-full px-3 py-2 border rounded-md"></div><div class="mb-4"><label for="email" class="block text-gray-700 font-bold mb-2">Ваш Email</label><input type="email" id="email" class="w-full px-3 py-2 border rounded-md"></div><div class="mb-4"><label for="message" class="block text-gray-700 font-bold mb-2">Сообщение</label><textarea id="message" rows="4" class="w-full px-3 py-2 border rounded-md"></textarea></div><button type="submit" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-full hover:bg-blue-600 cta-button">Отправить</button></form></div></div></div></div></section>
+        </div>
+
+        <!-- СТРАНИЦА: Корзина -->
+        <div id="page-cart" class="page">
+            <section class="py-20">
+                <div class="container mx-auto px-6">
+                    <h2 class="text-4xl font-bold text-center text-gray-800 mb-12">Ваша корзина</h2>
+                    <div id="cart-view" class="hidden">
+                        <div class="lg:grid lg:grid-cols-3 lg:gap-8">
+                            <div id="cart-items-container" class="lg:col-span-2 space-y-6"></div>
+                            <div id="cart-summary" class="mt-8 lg:mt-0"><div class="bg-white rounded-lg shadow-lg p-6"><h3 class="text-2xl font-bold text-gray-800 mb-4">Итог заказа</h3><div class="flex justify-between text-gray-600 mb-2"><span>Сумма товаров:</span><span id="cart-subtotal">0 руб.</span></div><div class="flex justify-between text-gray-600 mb-4"><span>Доставка:</span><span>Бесплатно</span></div><div class="border-t border-gray-200 pt-4 flex justify-between font-bold text-lg text-gray-800"><span>Итого к оплате:</span><span id="cart-total">0 руб.</span></div><button class="w-full mt-6 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 cta-button">Оформить заказ</button></div></div>
+                        </div>
+                    </div>
+                    <div id="empty-cart-message" class="text-center">
+                        <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        <h3 class="mt-2 text-2xl font-semibold text-gray-800">Ваша корзина пуста</h3>
+                        <p class="mt-1 text-gray-500">Похоже, вы еще ничего не добавили. Начните покупки прямо сейчас!</p>
+                        <div class="mt-6"><a href="#catalog" class="nav-link text-white bg-blue-500 hover:bg-blue-600 font-semibold rounded-md px-4 py-2 cta-button">Перейти в каталог</a></div>
+                    </div>
+                    
+                    <!-- Секция с рекомендациями -->
+                    <div id="recommendations-section" class="mt-20 pt-10 border-t border-gray-200 hidden">
+                        <h3 class="text-2xl font-bold text-center text-gray-800 mb-8">Исходя из ваших запросов, Умный помощник рекомендует:</h3>
+                        <div class="carousel-wrapper">
+                           <div id="recommendations-container" class="carousel-container">
+                               <!-- Сюда будут добавляться слайды с рекомендациями -->
+                           </div>
+                           <button id="rec-arrow-left" class="carousel-arrow rec-left hidden"><svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                           <button id="rec-arrow-right" class="carousel-arrow rec-right hidden"><svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                           </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer и Modal без изменений -->
+    <footer class="gradient-bg text-white"><div class="container mx-auto px-6 py-10"><div class="flex flex-wrap justify-between"><div class="w-full md:w-1/3 mb-6 md:mb-0"><h3 class="text-xl font-bold mb-2">Decs&Lagulion</h3><p class="max-w-xs">Инновационные решения для идеальной чистоты вашего дома.</p></div><div class="w-full md:w-1/3 mb-6 md:mb-0"><h3 class="text-xl font-bold mb-2">Навигация</h3><ul><li class="mb-2"><a href="#catalog" class="nav-link hover:underline">Каталог</a></li><li class="mb-2"><a href="#about" class="nav-link hover:underline">О нас</a></li><li class="mb-2"><a href="#contact" class="nav-link hover:underline">Контакты</a></li></ul></div><div class="w-full md:w-1/3"><h3 class="text-xl font-bold mb-2">Контакты</h3><p>Email: contact@decs-lagulion.com</p><p>Телефон: +7 (800) 555-35-35</p></div></div><div class="mt-8 border-t border-blue-400 pt-6 text-center text-sm"><p>&copy; 2025 Decs&Lagulion. Все права защищены.</p></div></div></footer>
+    <div id="modal-backdrop" class="modal-backdrop"><div id="modal-content" class="modal-content"><h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-4">Ваш результат</h3><div id="modal-body" class="text-gray-700"></div><span id="modal-close" class="modal-close text-gray-500 hover:text-gray-800"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></span></div></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Состояние приложения ---
+            let cart = [];
+            let aiRecommendations = new Set(); 
+            let chatHistoryForAPI = [];
+
+            // --- База данных товаров ---
+            const allProducts = [
+                // Decs Products
+                { id: '1', name: 'Спрей «Антикальций» 500 мл', price: 115, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_sredstvo-dlya-udaleniya-izvestkovogo-naleta-decs-antikalcij-500-ml-sprej.png', brand: 'decs', desc: 'Эффективно удаляет известковый налет и ржавчину.' },
+                { id: '21', name: 'DECS Акрилайт 500 мл', price: 112, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-akrilajt-500-ml-15-sht-up.png', brand: 'decs', desc: 'Для акриловых ванн и душевых кабин. Активная пена.' },
+                { id: '3', name: 'Спрей «Антижир» 500 мл', price: 126, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_sredstvo-dlya-udaleniya-zhira-nagara-i-kopoti-so-skovorod-decs-antizhir-500-ml-sprej.png', brand: 'decs', desc: 'Мощное средство против застарелого жира и нагара.' },
+                { id: '22', name: 'DECS WC гель с хлором 750 мл', price: 88, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-wc-gel-s-hlorom-750-ml-15-sht-up.png', brand: 'decs', desc: 'Для сантехники, полов, стен. Отбеливает, чистит.' },
+                { id: '23', name: 'DECS WC гель универсал 750 мл', price: 86, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-wc-gel-universal-750-ml-15-sht-up.png', brand: 'decs', desc: 'При сложных загрязнениях. Многофункциональное средство.' },
+                { id: '24', name: 'DECS Белизна гель 750 мл', price: 89, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-belizna-gel-750-ml-15-sht-up.png', brand: 'decs', desc: 'Отбеливает, чистит, дезинфицирует.' },
+                { id: '25', name: 'DECS Белизна гель 1000 мл', price: 94, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-belizna-gel-1000-ml-10-sht-up.png', brand: 'decs', desc: 'Отбеливатель с загущенной формулой.' },
+                { id: '26', name: 'DECS Санитарный концентрат 1000 мл', price: 82, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-sanitarnyj-koncentrat-1000-ml-10-sht-up.png', brand: 'decs', desc: 'Многофункциональное чистящее средство.' },
+                { id: '7', name: 'Гель «Антизасор» 1000 мл', price: 84, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-antizasor-gel-1000-ml-10-sht-up.png', brand: 'decs', desc: 'Гель для всех видов труб. При сложных засорах.' },
+                { id: '27', name: 'DECS WC гель Лимон 750 мл', price: 88, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-wc-gel-limon-750-ml-15-sht-up.png', brand: 'decs', desc: 'С ароматом лимона, при сложных загрязнениях.' },
+                { id: '28', name: 'DECS Антизасор гель 750 мл', price: 78, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-antizasor-gel-750-ml-15-sht-up.png', brand: 'decs', desc: 'Гель для всех видов труб. При сложных засорах.' },
+                { id: '9', name: 'Концентрат для полов «Морская свежесть» 1л', price: 84, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-koncentrat-dlya-polov-morskaya-svezhest-12sht-up.png', brand: 'decs', desc: 'Экономичное средство для чистоты полов без разводов.' },
+                { id: '29', name: 'Концентрат для полов «Лимонная свежесть» 1л', price: 84, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-koncentrat-dlya-polov-limonnaya-svezhest-12sht-up.png', brand: 'decs', desc: 'Экономичное средство с ароматом лимона.' },
+                { id: '30', name: 'DECS PROFESSIONAL Антижир 5л', price: 730, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-antizhir-sprej-5000-ml-1sht-up.png', brand: 'decs', desc: 'Спрей для удаления масложировых и белковых загрязнений.' },
+                { id: '31', name: 'DECS PROFESSIONAL Антизасор 5л', price: 540, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-antizasor-gel-5000-ml-1sht-up.png', brand: 'decs', desc: 'Эффективно растворяет волосы и другие загрязнения.' },
+                { id: '32', name: 'DECS PROFESSIONAL Белизна 5л', price: 630, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_decs-belizna-gel-5000-ml-1sht-up.png', brand: 'decs', desc: 'Экономичная, эффективная, дезинфицирует.' },
+                
+                // Lagulion Products
+                { id: '11', name: 'Средство для стекол Свежий Озон', price: 82, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_sredstvo-dlya-mytya-stekol-i-zerkal-svezhij-ozon-lagulino.png', brand: 'lagulion', desc: 'Без разводов, придает блеск.' },
+                { id: '12', name: 'Средство для стекол Цитрусовая Свежесть', price: 82, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/sredstvo-dlya-mytya-stekol-i-zerkal-citrusovaya-svezhest-lagulino.png', brand: 'lagulion', desc: 'С антистатическим эффектом, придает блеск.' },
+                { id: '13', name: 'Средство для стекол Морской Бриз', price: 82, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/sredstvo-dlya-mytya-stekol-i-zerkal-morskoj-briz-lagulino.png', brand: 'lagulion', desc: 'Защищает от пыли, придает блеск.' },
+                { id: '14', name: 'Гель для посуды Спелое Яблоко', price: 74, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_gel-dlya-mytya-posudy-speloe-yabloko-lagulino-ooo-deks.png', brand: 'lagulion', desc: 'Эффективен в холодной воде, с ароматом яблока.' },
+                { id: '15', name: 'Гель для посуды Солнечный Апельсин', price: 74, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_gel-dlya-mytya-posudy-solnechnyj-apelsin-lagulino-ooo-deks.png', brand: 'lagulion', desc: 'Отлично пенится, с ароматом апельсина.' },
+                { id: '4', name: 'Гель для мытья посуды "Алоэ вера"', price: 74, image: "https://www.decss.ru/images/tovary_1_kategorii/gel_dlya_mytya_posudy_aloe_vera_lagulino_ooo_deks.png", brand: "lagulion", desc: "Бережно относится к коже рук." },
+                { id: '16', name: 'Кондиционер для стирки белья Южная ночь', price: 111, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_kondicioner-dlya-stirki-belya-yuzhnaya-noch-lagulino-ooo-deks.png', brand: 'lagulion', desc: 'Сохраняет цвет, гипоаллергенен, придает свежесть.' },
+                { id: '6', name: 'Кондиционер для белья "Утренняя свежесть"', price: 111, image: "https://www.decss.ru/images/tovary_1_kategorii/kondicioner_dlya_belya_utrennyaya_svezhest_lagulino_ooo_deks.png", brand: "lagulion", desc: "Придает белью мягкость и свежий аромат." },
+                { id: '17', name: 'Детский кондиционер для белья Спелый персик', price: 111, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_detskij-kondicioner-dlya-belya-spelyj-persik-lagulino-ooo-deks.png', brand: 'lagulion', desc: 'Сохраняет цвет, придает мягкость, без красителей.' },
+                { id: '18', name: 'Гель для стирки Белого белья', price: 300, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_gel-dlya-stirki-belogo-belya-lagulino-ooo-deks.png', brand: 'lagulion', desc: 'Сохранение белого цвета и структуры ткани.' },
+                { id: '19', name: 'Гель для стирки Цветного белья', price: 300, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_gel-dlya-stirki-cvetnogo-belya-lagulino-ooo-deks.png', brand: 'lagulion', desc: 'Бережная стирка, формула сохранения яркости цвета.' },
+                { id: '20', name: 'Гель для стирки белья Универсальный', price: 300, image: 'https://www.decss.ru/components/com_jshopping/files/img_products/full_gel-dlya-stirki-belya-universalnyj-lagulino-ooo-deks.png', brand: 'lagulion', desc: 'Эффективное отстирывание, подходит для любого белья.' }
+            ];
+
+            const productCatalogForPrompt = allProducts.map(p => `ID: ${p.id}, Название: ${p.name}`).join('; ');
+
+            // --- Получение элементов DOM ---
+            const dom = {
+                pages: document.querySelectorAll('.page'),
+                navLinks: document.querySelectorAll('.nav-link'),
+                cartBadge: document.getElementById('cart-badge'),
+                cartView: document.getElementById('cart-view'),
+                emptyCartMessage: document.getElementById('empty-cart-message'),
+                cartItemsContainer: document.getElementById('cart-items-container'),
+                cartSubtotalEl: document.getElementById('cart-subtotal'),
+                cartTotalEl: document.getElementById('cart-total'),
+                recommendationsSection: document.getElementById('recommendations-section'),
+                recommendationsContainer: document.getElementById('recommendations-container'),
+                recArrowLeft: document.getElementById('rec-arrow-left'),
+                recArrowRight: document.getElementById('rec-arrow-right'),
+                aboutSlidesContainer: document.querySelector('.about-slides-container'),
+                aboutArrowLeft: document.getElementById('about-arrow-left'),
+                aboutArrowRight: document.getElementById('about-arrow-right'),
+                assistantContainer: document.getElementById('assistant-container'),
+                chatForm: document.getElementById('chat-form'),
+                chatInput: document.getElementById('chat-input'),
+                chatHistory: document.getElementById('chat-history'),
+                modal: { backdrop: document.getElementById('modal-backdrop'), body: document.getElementById('modal-body'), close: document.getElementById('modal-close') }
+            };
+
+            // --- Функции отрисовки ---
+            function createProductCardHTML(product) {
+                return `
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
+                        <img src="${product.image}" alt="${product.name}" class="w-full h-56 object-contain p-2" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/333?text=Изображение';">
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">${product.name}</h3>
+                            <p class="text-gray-600 mb-4 flex-grow">${product.desc}</p>
+                            <div class="flex items-center justify-between mt-auto">
+                                <span class="text-2xl font-bold text-gray-900">${product.price} руб.</span>
+                                <button class="add-to-cart-btn bg-blue-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-blue-600 transition-colors" data-id="${product.id}">В корзину</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderAllCatalogs() {
+                const containers = {
+                    all: document.getElementById('catalog-all-container'),
+                    decs: document.getElementById('catalog-decs-container'),
+                    lagulion: document.getElementById('catalog-lagulion-container')
+                };
+                Object.values(containers).forEach(c => c.innerHTML = '');
+
+                allProducts.forEach(product => {
+                    const cardHTML = createProductCardHTML(product);
+                    containers.all.innerHTML += cardHTML;
+                    if (product.brand === 'decs') containers.decs.innerHTML += cardHTML;
+                    else if (product.brand === 'lagulion') containers.lagulion.innerHTML += cardHTML;
+                });
+            }
+
+            function showPage(pageId) {
+                dom.pages.forEach(page => page.classList.remove('active'));
+                const newPage = document.getElementById(pageId);
+                if (newPage) {
+                    newPage.classList.add('active');
+                    if (pageId === 'page-cart') {
+                        renderRecommendations();
+                    }
+                }
+                window.scrollTo(0, 0);
+            }
+            // --- Логика корзины ---
+            function updateCart() {
+                renderCartItems();
+                renderCartSummary();
+                updateCartBadge();
+            }
+
+            function addToCart(product) {
+                const existingProduct = cart.find(item => item.id === product.id);
+                if (existingProduct) { existingProduct.quantity++; } else { cart.push({ ...product, quantity: 1 }); }
+                updateCart();
+            }
+
+            function updateCartQuantity(productId, newQuantity) {
+                const productInCart = cart.find(item => item.id === productId);
+                if (productInCart) {
+                    if (newQuantity > 0) {
+                        productInCart.quantity = newQuantity;
+                    } else {
+                        cart = cart.filter(item => item.id !== productId);
+                    }
+                }
+                updateCart();
+            }
+
+            function renderCartItems() {
+                dom.cartView.style.display = cart.length > 0 ? 'block' : 'none';
+                dom.emptyCartMessage.style.display = cart.length > 0 ? 'none' : 'block';
+                if (cart.length === 0) return;
+                dom.cartItemsContainer.innerHTML = '';
+                cart.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'bg-white rounded-lg shadow-lg p-4 flex items-center space-x-4';
+                    itemElement.innerHTML = `<img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-contain p-1 rounded-md" onerror="this.onerror=null;this.src='https://placehold.co/80x80/e2e8f0/333?text=...';"><div class="flex-grow"><h4 class="font-bold text-gray-800">${item.name}</h4><p class="text-sm text-gray-500">${item.price} руб.</p></div><div class="flex items-center space-x-3"><button class="quantity-change text-gray-500 hover:text-black" data-id="${item.id}" data-change="-1">-</button><span class="font-bold text-lg">${item.quantity}</span><button class="quantity-change text-gray-500 hover:text-black" data-id="${item.id}" data-change="1">+</button></div><div class="text-right w-24"><p class="font-bold text-lg">${itemTotal} руб.</p></div><button class="remove-item text-red-500 hover:text-red-700" data-id="${item.id}"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>`;
+                    dom.cartItemsContainer.appendChild(itemElement);
+                });
+            }
+
+            function renderCartSummary() {
+                const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                dom.cartSubtotalEl.textContent = `${subtotal} руб.`;
+                dom.cartTotalEl.textContent = `${subtotal} руб.`;
+            }
+
+            function updateCartBadge() {
+                const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+                dom.cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
+                dom.cartBadge.textContent = totalItems;
+            }
+
+            // --- Логика Умного Помощника ---
+            function activateChatMode() {
+                if (!dom.assistantContainer.classList.contains('chat-active')) {
+                     dom.assistantContainer.classList.add('chat-active');
+                }
+            }
+            
+            function addMessageToChat(message, sender, isTyping = false) {
+                const messageElement = document.createElement('div');
+                messageElement.className = `chat-bubble ${sender === 'user' ? 'user-bubble' : 'assistant-bubble'}`;
+                if (isTyping) {
+                    messageElement.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+                } else {
+                    messageElement.textContent = message;
+                }
+                dom.chatHistory.appendChild(messageElement);
+                dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight;
+                return messageElement;
+            }
+
+            function renderAssistantResponse(element, text, productIds) {
+                element.innerHTML = ''; 
+                const textNode = document.createElement('p');
+                element.appendChild(textNode);
+
+                let i = 0;
+                const speed = 15;
+                function typeWriter() {
+                    if (i < text.length) {
+                        textNode.textContent += text.charAt(i);
+                        i++;
+                        dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight;
+                        setTimeout(typeWriter, speed);
+                    } else {
+                        if (productIds && productIds.length > 0) {
+                            const cardsContainer = document.createElement('div');
+                            cardsContainer.className = 'mt-3 carousel-wrapper';
+                            cardsContainer.innerHTML = `
+                                <div class="carousel-container">
+                                    ${productIds.map(id => {
+                                        const product = allProducts.find(p => p.id === id);
+                                        return product ? `
+                                        <div class="carousel-slide" style="flex: 0 0 120px; padding: 0.25rem;">
+                                            <div class="bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col text-center">
+                                                <img src="${product.image}" alt="${product.name}" class="w-full h-16 object-contain p-1" onerror="this.onerror=null;this.src='https://placehold.co/80x80/e2e8f0/333?text=...';">
+                                                <div class="p-2 flex flex-col flex-grow">
+                                                    <p class="font-bold text-xs truncate leading-tight">${product.name}</p>
+                                                    <button class="add-to-cart-btn mt-2 w-full bg-indigo-500 text-white text-xs px-2 py-1 rounded-full font-semibold hover:bg-indigo-600" data-id="${product.id}">В корзину</button>
+                                                </div>
+                                            </div>
+                                        </div>` : '';
+                                    }).join('')}
+                                </div>
+                            `;
+                            element.appendChild(cardsContainer);
+                            dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight;
+                        }
+                    }
+                }
+                typeWriter();
+            }
+            
+            async function handleAssistantQuery(userInput, typingBubble) {
+                const lowerCaseInput = userInput.toLowerCase();
+                let basePrompt;
+                 if (lowerCaseInput.includes('план') || lowerCaseInput.includes('уборк')) {
+                     basePrompt = `Ты — эксперт-помощник. Ответь кратко (до 10 предложений) и без Markdown. Твоя задача — всегда помогать. Категорически запрещено использовать фразы "к сожалению", "у нас нет", "не могу помочь" и любые другие формы отказа. Если прямого аналога нет, предложи самый близкий по свойствам продукт. Клиенту нужен план для: '${userInput}'.`;
+                } else if (lowerCaseInput.includes('выбрать') || lowerCaseInput.includes('подобрать') || lowerCaseInput.includes('посоветуй') || lowerCaseInput.includes('какой')) {
+                    basePrompt = `Ты — эксперт-консультант. Ответь кратко (до 10 предложений) и без Markdown. Твоя задача — всегда помогать. Категорически запрещено использовать фразы "к сожалению", "у нас нет", "не могу помочь" и любые другие формы отказа. Если прямого аналога нет, предложи самый близкий по свойствам продукт. Клиент просит помочь с выбором: '${userInput}'.`;
+                } else {
+                    basePrompt = `Ты — эксперт по чистящим средствам. Ответь кратко (до 10 предложений) и без Markdown. Твоя задача — всегда помогать. Категорически запрещено использовать фразы "к сожалению", "у нас нет", "не могу помочь" и любые другие формы отказа. Если прямого аналога нет, предложи самый близкий по свойствам продукт. У клиента проблема: '${userInput}'.`;
+                }
+
+                const prompt = `${basePrompt}\n\nДоступные продукты: [${productCatalogForPrompt}].\n\nВ конце ответа, на НОВОЙ СТРОКЕ, напиши 'IDS: ' и перечисли ТОЛЬКО ID рекомендованных продуктов. Не пиши ID в основном тексте ответа. Например: IDS:1,3.`;
+
+                chatHistoryForAPI.push({ role: "user", parts: [{ text: prompt }] });
+
+                const apiKey = "AIzaSyCrpSOWxXW2VoowfNRf0SkMJj8WKCfMc6M";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: chatHistoryForAPI })
+                    });
+                    if (!response.ok) throw new Error(`Ошибка API: ${response.statusText}`);
+                    
+                    const result = await response.json();
+                    
+                    typingBubble.remove();
+                    
+                    if (result.candidates && result.candidates.length > 0) {
+                        const assistantResponseText = result.candidates[0].content.parts[0].text;
+                        chatHistoryForAPI.push({ role: "model", parts: [{ text: assistantResponseText }] });
+
+                        const mainContent = assistantResponseText.split('IDS:')[0].trim();
+                        let recommendedIds = [];
+                        const idsLine = assistantResponseText.split('\n').find(line => line.startsWith('IDS:'));
+                        if (idsLine) {
+                            recommendedIds = idsLine.replace('IDS:', '').trim().split(',').map(id => id.trim()).filter(id => id);
+                            recommendedIds.forEach(id => {
+                                if(id && allProducts.some(p => p.id === id)) {
+                                     aiRecommendations.add(id);
+                                }
+                            });
+                        }
+                        
+                        const newBubble = addMessageToChat('', 'assistant');
+                        renderAssistantResponse(newBubble, mainContent, recommendedIds);
+
+                    } else {
+                        addMessageToChat('Не удалось получить ответ. Попробуйте снова.', 'assistant');
+                    }
+                } catch (error) {
+                    console.error("Ошибка при вызове Gemini API:", error);
+                    addMessageToChat('Произошла ошибка. Пожалуйста, попробуйте позже.', 'assistant');
+                }
+            }
+
+            // --- Общая инициализация и обработчики событий ---
+            function init() {
+                renderAllCatalogs();
+                updateCart();
+
+                document.querySelectorAll('.comparison-slider').forEach(initComparisonSlider);
+                initCarousel(dom.aboutSlidesContainer, dom.aboutArrowLeft, dom.aboutArrowRight);
+                initCarousel(dom.recommendationsContainer, dom.recArrowLeft, dom.recArrowRight);
+                
+                dom.navLinks.forEach(link => link.addEventListener('click', (e) => { 
+                    e.preventDefault(); 
+                    showPage('page-' + e.currentTarget.getAttribute('href').substring(1));
+                }));
+                
+                document.body.addEventListener('click', function(e) {
+                    const addToCartBtn = e.target.closest('.add-to-cart-btn');
+                    const quantityChangeBtn = e.target.closest('.quantity-change');
+                    const removeItemBtn = e.target.closest('.remove-item');
+
+                    if (addToCartBtn) {
+                        const product = allProducts.find(p => p.id === addToCartBtn.dataset.id);
+                        if(product) addToCart(product);
+                    } else if (quantityChangeBtn) {
+                        const productId = quantityChangeBtn.dataset.id;
+                        const change = parseInt(quantityChangeBtn.dataset.change, 10);
+                        const productInCart = cart.find(item => item.id === productId);
+                        if (productInCart) updateCartQuantity(productId, productInCart.quantity + change);
+                    } else if (removeItemBtn) {
+                        updateCartQuantity(removeItemBtn.dataset.id, 0);
+                    }
+                });
+
+                dom.chatInput.addEventListener('focus', activateChatMode, { once: true });
+                dom.chatForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const userInput = dom.chatInput.value.trim();
+                    if (!userInput) return;
+                    
+                    activateChatMode();
+                    if (chatHistoryForAPI.length === 0) dom.chatHistory.innerHTML = '';
+    
+                    addMessageToChat(userInput, 'user');
+                    dom.chatInput.value = '';
+                    const typingBubble = addMessageToChat('', 'assistant', true);
+                    
+                    handleAssistantQuery(userInput, typingBubble);
+                });
+            }
+            
+            function initCarousel(container, prevBtn, nextBtn) {
+                if(!container || !prevBtn || !nextBtn) return;
+                
+                const updateArrows = () => {
+                    if (!container) return;
+                    const canScrollLeft = container.scrollLeft > 0;
+                    const canScrollRight = container.scrollWidth > container.clientWidth && Math.ceil(container.scrollLeft) < container.scrollWidth - container.clientWidth;
+                    prevBtn.classList.toggle('hidden', !canScrollLeft);
+                    nextBtn.classList.toggle('hidden', !canScrollRight);
+                };
+                
+                prevBtn.addEventListener('click', () => { container.scrollLeft -= container.clientWidth * 0.8; });
+                nextBtn.addEventListener('click', () => { container.scrollLeft += container.clientWidth * 0.8; });
+                container.addEventListener('scroll', updateArrows, { passive: true });
+                updateArrows();
+            }
+
+            function initComparisonSlider(slider) {
+                const handle = slider.querySelector('.slider-handle');
+                const afterImage = slider.querySelector('.after-image');
+                let isDragging = false;
+                function startDrag(e) { isDragging = true; document.body.classList.add('no-select'); }
+                function stopDrag() { isDragging = false; document.body.classList.remove('no-select'); }
+                function onDrag(e) {
+                    if (!isDragging) return; let clientX = e.clientX || e.touches[0].clientX;
+                    const sliderRect = slider.getBoundingClientRect(); let newX = Math.max(0, Math.min(clientX - sliderRect.left, sliderRect.width));
+                    const percentage = (newX / sliderRect.width) * 100; handle.style.left = `${percentage}%`;
+                    afterImage.style.clipPath = `polygon(${percentage}% 0, 100% 0, 100% 100%, ${percentage}% 100%)`;
+                }
+                slider.addEventListener('mousedown', (e) => { startDrag(); onDrag(e); }); document.addEventListener('mouseup', stopDrag); document.addEventListener('mousemove', onDrag);
+                slider.addEventListener('touchstart', (e) => { startDrag(); onDrag(e); }, { passive: true }); document.addEventListener('touchend', stopDrag); document.addEventListener('touchmove', onDrag);
+            }
+            
+            init();
+        });
+    </script>
+</body>
+</html>
